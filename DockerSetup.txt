@@ -1,0 +1,5 @@
+Docker build command:
+docker build -t robbev/spotifyvisualizer .
+
+Docker run command: 
+docker run -d --restart unless-stopped --name spotifyvisualizer robbev/spotifyvisualizer

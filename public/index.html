@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="styles.css">
+    <style type="text/css">
+        #login, #loggedin {
+          display: none;
+        }
+        .text-overflow {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          width: 400px;
+        }
+        .acccontainer {
+            position: relative;
+            float: right;
+            border: solid;
+            padding: 5px;
+            margin: 20px;
+        }
+        #oauth, #obtain-new-token, #user-profile, #current-track {
+            border: groove;
+            margin-right: 0;
+        }
+        #current-track {
+          padding-bottom: 25px;
+        }
+      </style>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <script src="https://d3js.org/d3-array.v1.min.js"></script>
+    <script src="https://d3js.org/d3-color.v1.min.js"></script>
+    <script src="https://d3js.org/d3-format.v1.min.js"></script>
+    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+    <script src="https://d3js.org/d3-time.v1.min.js"></script>
+    <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
+    <script src="https://d3js.org/d3-scale.v2.min.js"></script>
+</head>
+
+<body>
+    <canvas id="audioViz" style="width: 500px; height: 370px; position: absolute"></canvas>
+
+    <span id="testlengthspan" style="font-size: 20px; font-family: Verdana; white-space: nowrap; display: none;">track name</span>
+
+    <div style="margin-top: 375px; left: 20px; position: absolute">
+      <label class="switch">
+        <input type="checkbox" value="true" name="Circle" id="CircleViz" onclick="SetVizualizer()">
+        <span class="slider"></span>
+      </label> Circle Vizualizer 
+      <label class="switch">
+        <input type="checkbox" value="true" name="Line" id="LineViz" onclick="SetVizualizer()">
+        <span class="slider"></span>
+      </label> Line Vizualizer 
+      <label class="switch">
+        <input type="checkbox" value="true" name="Bar" id="BarViz" onclick="SetVizualizer()">
+        <span class="slider"></span>
+      </label> Bar Vizualizer <br />
+      <div>
+        <input type="text" id="CircleColor" name="CircleColor"
+                value="#000000" max='7' min='4' onchange="SetCanvas()">
+        <label for="CircleColor">Circle Color</label>
+      </div>
+      <div>
+        <input type="text" id="LineColor" name="LineColor"
+              value="#000000" max='7' min='4' onchange="SetCanvas()">
+        <label for="LineColor">Line Color</label> 
+        <input type="text" id="DisplayerColor" name="DisplayerColor"
+              value="#000000" max='7' min='4' onchange="SetCanvas()">
+        <label for="DisplayerColor">'Current Song:' Color</label>
+      </div>
+      <div>
+        <input type="text" id="BarColor" name="BarColor"
+              value="#000000" max='7' min='4' onchange="SetCanvas()">
+        <label for="BarColor">Bar Color</label> 
+        <input type="text" id="SongNameColor" name="SongNameColor"
+              value="#000000" max='7' min='4' onchange="SetCanvas()">
+        <label for="SongNameColor">Song Name Color</label>
+      </div><br />
+      <div>
+        <input type="text" id="BackgrndColor1" name="BackgrndColor1"
+              value="#ffffff" max='7' min='4' onclick="SetCanvas()">
+        <label for="BackgrndColor1">Background Top Color + </label>
+        <input type="number" id="Backgrnd1Opacity" max='1' min='0' step="0.05" value="0">
+        <label for="Backgrnd1Opacity">Opacity</label>
+      </div>
+      <div>
+        <input type="text" id="BackgrndColor2" name="BackgrndColor2"
+              value="#ffffff" max='7' min='4' onclick="SetCanvas()">
+        <label for="BackgrndColor2">Background Middle Color + </label>
+        <input type="number" id="Backgrnd2Opacity" max='1' min='0' step="0.05" value="0">
+        <label for="Backgrnd2Opacity">Opacity</label>
+      </div>
+      <div>
+        <input type="text" id="BackgrndColor3" name="BackgrndColor3"
+              value="#ffffff" max='7' min='4' onclick="SetCanvas()">
+        <label for="BackgrndColor3">Background Bottom Color + </label>
+        <input type="number" id="Backgrnd3Opacity" max='1' min='0' step="0.05" value="0">
+        <label for="Backgrnd3Opacity">opacity</label>
+      </div><br />
+      <label class="switch">
+        <input type="checkbox" checked="true" name="BackgrndTransparent" id="BackgrndTransparency" onclick="SetCanvas()">
+        <span class="slider"></span>
+      </label> Make Background Transparent <br />
+      <label class="switch">
+        <input type="checkbox" checked="true" name="CircleRGB" id="CircleRGB" onclick="SetCanvas()">
+        <span class="slider"></span>
+      </label> Make Circle Vizualizer RGB 
+      <label class="switch">
+        <input type="checkbox" checked="true" name="LineRGB" id="LineRGB" onclick="SetCanvas()">
+        <span class="slider"></span>
+      </label> Make Line Vizualizer RGB 
+      <label class="switch">
+        <input type="checkbox" checked="true" name="BarRGB" id="BarRGB" onclick="SetCanvas()">
+        <span class="slider"></span>
+      </label> Make Bar Vizualizer RGB 
+    </div>
+
+    <div class="acccontainer">
+      <div id="login">
+        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <div id="oauth">
+        </div>
+        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+        <div id="current-track">
+        </div>
+      </div>
+    </div>
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h1>Logged in as {{display_name}}</h1>
+      <div class="media">
+        <div class="pull-left">
+          <img class="media-object" width="150" src="{{images.0.url}}" />
+        </div>
+        <div class="media-body">
+          <dl class="dl-horizontal">
+            <dt>Display name</dt><dd class="clearfix">{{display_name}}</dd>
+            <dt>Id</dt><dd>{{id}}</dd>
+            <dt>Email</dt><dd>{{email}}</dd>
+            <dt>Spotify URI</dt><dd><a href="{{external_urls.spotify}}">{{external_urls.spotify}}</a></dd>
+            <dt>Link</dt><dd><a href="{{href}}">{{href}}</a></dd>
+            <dt>Profile Image</dt><dd class="clearfix"><a href="{{images.0.url}}">{{images.0.url}}</a></dd>
+            <dt>Country</dt><dd>{{country}}</dd>
+          </dl>
+        </div>
+      </div>
+    </script>
+
+    <script id="oauth-template" type="text/x-handlebars-template">
+      <h2>oAuth info</h2>
+      <dl class="dl-horizontal">
+        <dt>Access token</dt><dd class="text-overflow">{{access_token}}</dd>
+        <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}</dd>
+      </dl>
+    </script>
+
+    <script id="current-track-template" type="text/x-handlebars-template">
+        <h2>Current Track</h2>
+        <div class="pull-left">
+          <img class="media-object" width="85" src="{{item.album.images.0.url}}" />
+        </div>
+        <div class="media-body">
+          <dl class="dl-horizontal">
+            <dt>Song Name:</dt><dd class="text-overflow">{{item.name}}</dd>
+            <dt>Artists:</dt>
+            <dd class="text-overflow">
+            {{#each item.artists}}
+              {{#if @last}}
+                {{name}} 
+              {{else}}
+                {{name}}, 
+              {{/if}}
+            {{/each}}
+          </dd>
+          </dl>
+        </div>
+      </script>
+
+      <script>
+        //audio visualizer script
+        var CircleViz = false;
+        var LineViz = false;
+        var BarViz = false;
+        function SetVizualizer() {
+          var CircleCheckBox = document.getElementById('CircleViz');
+          var LineCheckBox = document.getElementById('LineViz');
+          var BarCheckBox = document.getElementById('BarViz');
+          //debugger
+          if (CircleCheckBox.checked == true)
+            CircleViz = true;
+          else CircleViz = false;
+        
+          if (LineCheckBox.checked == true)
+            LineViz = true;
+          else LineViz = false;
+        
+          if (BarCheckBox.checked == true)
+            BarViz = true;
+          else BarViz = false;
+        }
+        
+        var inputs = ['DisplayerColor','SongNameColor','CircleColor','LineColor','BarColor','BackgrndColor1','BackgrndColor2','BackgrndColor3'];
+        var CircleCol, LineCol, BarCol, BackgrndCol1, BackgrndCol2, BackgrndCol3, BackgrndTransparent = true, CircleRGB = true, LineRGB = true, BarRGB = true, displayerColor, contentColor;
+        function SetCanvas() {
+          var isHexFormat = true;
+          inputs.forEach(input => {
+            if (/^#([0-9A-F]{3}){1,2}$/i.test(document.getElementById(input).value) === false) {
+              if (document.getElementById(input).value.indexOf(0) === '#') {
+                isHexFormat = false;
+              }
+              else
+              {
+                document.getElementById(input).value = colourNameToHex(document.getElementById(input).value);
+              }
+            }
+          })
+
+          if (isHexFormat === true) {
+          displayerColor = document.getElementById('DisplayerColor').value;
+          contentColor = document.getElementById('SongNameColor').value;
+          var CircleColor = document.getElementById('CircleColor');
+          var LineColor = document.getElementById('LineColor');
+          var BarColor = document.getElementById('BarColor');
+          var BackgrndColor1 = document.getElementById('BackgrndColor1');
+          var BackgrndColor2 = document.getElementById('BackgrndColor2');
+          var BackgrndColor3 = document.getElementById('BackgrndColor3');
+          BackgrndTransparent = document.getElementById('BackgrndTransparency').checked;
+          CircleRGB = document.getElementById('CircleRGB').checked;
+          LineRGB = document.getElementById('LineRGB').checked;
+          BarRGB = document.getElementById('BarRGB').checked;
+        
+          CircleCol = CircleColor.value;
+          LineCol = LineColor.value;
+          BarCol = BarColor.value;
+          BackgrndCol1 = BackgrndColor1.value;
+          BackgrndCol2 = BackgrndColor2.value;
+          BackgrndCol3 = BackgrndColor3.value;
+          }
+        }
+
+        function colourNameToHex(colour)
+{
+    var colours = {"aliceblue":"#f0f8ff","antiquewhite":"#faebd7","aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
+    "beige":"#f5f5dc","bisque":"#ffe4c4","black":"#000000","blanchedalmond":"#ffebcd","blue":"#0000ff","blueviolet":"#8a2be2","brown":"#a52a2a","burlywood":"#deb887",
+    "cadetblue":"#5f9ea0","chartreuse":"#7fff00","chocolate":"#d2691e","coral":"#ff7f50","cornflowerblue":"#6495ed","cornsilk":"#fff8dc","crimson":"#dc143c","cyan":"#00ffff",
+    "darkblue":"#00008b","darkcyan":"#008b8b","darkgoldenrod":"#b8860b","darkgray":"#a9a9a9","darkgrey":"#a9a9a9","darkgreen":"#006400","darkkhaki":"#bdb76b","darkmagenta":"#8b008b","darkolivegreen":"#556b2f",
+    "darkorange":"#ff8c00","darkorchid":"#9932cc","darkred":"#8b0000","darksalmon":"#e9967a","darkseagreen":"#8fbc8f","darkslateblue":"#483d8b","darkslategray":"#2f4f4f","darkturquoise":"#00ced1",
+    "darkviolet":"#9400d3","deeppink":"#ff1493","deepskyblue":"#00bfff","dimgray":"#696969","dodgerblue":"#1e90ff",
+    "firebrick":"#b22222","floralwhite":"#fffaf0","forestgreen":"#228b22","fuchsia":"#ff00ff",
+    "gainsboro":"#dcdcdc","ghostwhite":"#f8f8ff","gold":"#ffd700","goldenrod":"#daa520","gray":"#808080","grey":"#808080","green":"#008000","greenyellow":"#adff2f",
+    "honeydew":"#f0fff0","hotpink":"#ff69b4",
+    "indianred ":"#cd5c5c","indigo":"#4b0082","ivory":"#fffff0","khaki":"#f0e68c",
+    "lavender":"#e6e6fa","lavenderblush":"#fff0f5","lawngreen":"#7cfc00","lemonchiffon":"#fffacd","lightblue":"#add8e6","lightcoral":"#f08080","lightcyan":"#e0ffff","lightgoldenrodyellow":"#fafad2",
+    "lightgrey":"#d3d3d3","lightgray":"#d3d3d3","lightgreen":"#90ee90","lightpink":"#ffb6c1","lightsalmon":"#ffa07a","lightseagreen":"#20b2aa","lightskyblue":"#87cefa","lightslategray":"#778899","lightsteelblue":"#b0c4de",
+    "lightyellow":"#ffffe0","lime":"#00ff00","limegreen":"#32cd32","linen":"#faf0e6",
+    "magenta":"#ff00ff","maroon":"#800000","mediumaquamarine":"#66cdaa","mediumblue":"#0000cd","mediumorchid":"#ba55d3","mediumpurple":"#9370d8","mediumseagreen":"#3cb371","mediumslateblue":"#7b68ee",
+    "mediumspringgreen":"#00fa9a","mediumturquoise":"#48d1cc","mediumvioletred":"#c71585","midnightblue":"#191970","mintcream":"#f5fffa","mistyrose":"#ffe4e1","moccasin":"#ffe4b5",
+    "navajowhite":"#ffdead","navy":"#000080",
+    "oldlace":"#fdf5e6","olive":"#808000","olivedrab":"#6b8e23","orange":"#ffa500","orangered":"#ff4500","orchid":"#da70d6",
+    "palegoldenrod":"#eee8aa","palegreen":"#98fb98","paleturquoise":"#afeeee","palevioletred":"#d87093","papayawhip":"#ffefd5","peachpuff":"#ffdab9","peru":"#cd853f","pink":"#ffc0cb","plum":"#dda0dd","powderblue":"#b0e0e6","purple":"#800080",
+    "rebeccapurple":"#663399","red":"#ff0000","rosybrown":"#bc8f8f","royalblue":"#4169e1",
+    "saddlebrown":"#8b4513","salmon":"#fa8072","sandybrown":"#f4a460","seagreen":"#2e8b57","seashell":"#fff5ee","sienna":"#a0522d","silver":"#c0c0c0","skyblue":"#87ceeb","slateblue":"#6a5acd","slategray":"#708090","snow":"#fffafa","springgreen":"#00ff7f","steelblue":"#4682b4",
+    "tan":"#d2b48c","teal":"#008080","thistle":"#d8bfd8","tomato":"#ff6347","turquoise":"#40e0d0",
+    "violet":"#ee82ee",
+    "wheat":"#f5deb3","white":"#ffffff","whitesmoke":"#f5f5f5",
+    "yellow":"#ffff00","yellowgreen":"#9acd32"};
+
+    if (typeof colours[colour.toLowerCase()] != 'undefined')
+        return colours[colour.toLowerCase()];
+
+    return false;
+        }
+        
+        function hexToRgb(hex) {
+          // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+          var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+          hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+            return r + r + g + g + b + b;
+          });
+        
+          var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+          return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          } : null;
+        }
+         
+        function initPage(){
+            console.log("initializing visualizer");
+        
+            var newSong = true;
+        
+            var oauthSource = document.getElementById('oauth-template').innerHTML,
+                    oauthTemplate = Handlebars.compile(oauthSource),
+                    oauthPlaceholder = document.getElementById('oauth');
+        
+            var animationRequestId = undefined;
+            var volumeSmoothing = 100;
+            var currentTrackSource = document.getElementById('current-track-template').innerHTML,
+                currentTrackTemplate = Handlebars.compile(currentTrackSource),
+                currentTrackPlaceholder = document.getElementById('current-track');
+        
+            var intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections'];
+        
+            var access_token = sessionStorage.getItem('access_token');
+            var refresh_token = localStorage.getItem('refresh_token');
+        
+            var initialized = false, track_id = "", track_name = "", FullTrackName = "", trackNameLength = 300, track_duration = 100000, track_progress = 0,
+                initial_track_progress = 0, initial_start = 0, track_active = false, volume = 0;
+        
+            var track = {}, bars = {}, beats = {}, tatums = {}, sections = {}, segments = {};
+            
+            var activeIntervals = {
+                tatums: {},
+                segments: {},
+                beats: {},
+                bars: {},
+                sections: {}
+            }, hooks = {};
+        
+            var trackCurrent = {};
+            var trackAnalysis = {};
+            var trackFeatures = {};
+        
+            var connections = 0;
+        
+            if (access_token !== undefined)
+            {
+              initHooks();
+              ping();
+            }
+
+            function GetTrackNameLength() {
+              document.getElementById('testlengthspan').innerText = FullTrackName;
+              trackNameLength = $('#testlengthspan').width();
+              console.log("Track name length: ", trackNameLength);
+            };
+        
+            function initHooks() {
+              hooks = {
+                tatum: () => {},
+                segment: () => {},
+                beat: () => {},
+                bar: () => {},
+                section: () => {}
+              }
+        
+              // activeIntervals.watch('tatums', t => hooks.tatum(t))
+              // activeIntervals.watch('segments', s => hooks.segment(s))
+              // activeIntervals.watch('beats', b => hooks.beat(b))
+              // activeIntervals.watch('bars', b => hooks.bar(b))
+              // activeIntervals.watch('sections', s => hooks.section(s))
+            }
+        
+            function ping () {
+                setInterval(() => GetCurrentTrack(useCurrentTrackResponse), 2500);
+            }
+        
+            function refresh_access_token() {
+              $.ajax({
+                  url: '/refresh_token',
+                  data: {
+                      'refresh_token': refresh_token
+                  }
+              }).done(function(data) {
+                  access_token = data.access_token;
+                  console.log("token refreshed: ", access_token);
+                  oauthPlaceholder.innerHTML = oauthTemplate({
+                      access_token: access_token,
+                      refresh_token: refresh_token
+                  });
+                  sessionStorage.setItem('access_token', access_token);
+                  initialize(access_token, false);
+              });
+            }
+        
+            function GetCurrentTrack(callback) {
+                  //debugger
+                  var searchLink =
+                    "https://api.spotify.com/v1/me/player/currently-playing?additional_types=track";
+                  $.ajax({
+                      url: searchLink,
+                      headers: {
+                          Authorization: "Bearer " + access_token,
+                          Accept: "application/json"
+                      },
+                      error: function(err) {
+                        console.log("refreshing access_token!");
+                        refresh_access_token();
+                        // ping();
+                      },
+                      success: function(response) {
+                        tick = window.performance.now();
+                        console.log("connection: ", connections++);
+                        if (response)
+                        {
+                          if (response.is_playing === true)
+                          {
+                            //console.log("current track", response);
+                            //debugger
+                            //console.log("response ", response.progress_ms);
+                            if (trackCurrent.item)
+                            {
+                              if (trackCurrent.item.name !== response.item.name)
+                              {
+                                console.log('new track', response.item.name);
+                                ResetAnimation();
+                                initialized = false;
+                                newSong = true;
+                                callback(response);
+                              }
+                              else
+                              {
+                                newSong = false;
+                                if (initialized === false)
+                                {
+                                  callback(response);
+                                }
+                              }
+                            }
+                            else {
+                              track_progress = JSON.parse(JSON.stringify(response.progress_ms));
+                              callback(response);
+                            }
+                          }
+                          else if (response.is_playing === false) {
+                            console.log('track paused!');
+                            if (!($('.mymarquee').text().indexOf('(paused!)') > -1))
+                              $('.mymarquee').html(($('.mymarquee').html() + " (paused!)").toString());
+                            UpdateMarquee();
+                            track_active = false;
+                            initialized = false;
+                            ResetAnimation();
+                          }
+                        }
+                      }
+                  });
+                }
+        
+                function GetTrackAnalysis(callback) {
+                  //debugger
+                  var searchLink =
+                      "https://api.spotify.com/v1/audio-analysis/" + track_id;
+                  $.ajax({
+                      url: searchLink,
+                      headers: {
+                          Authorization: "Bearer " + access_token,
+                          Accept: "application/json"
+                      },
+                      success: function(response) {
+                          callback(response);
+                      }
+                  });
+                }
+        
+                function GetTrackFeatures(callback) {
+                  //debugger
+                  var searchLink =
+                      "https://api.spotify.com/v1/audio-features/" + track_id;
+                  $.ajax({
+                      url: searchLink,
+                      headers: {
+                          Authorization: "Bearer " + access_token,
+                          Accept: "application/json"
+                      },
+                      success: function(response) {
+                          callback(response);
+                      }
+                  });
+                }
+        
+                var tick = 0;
+                function useCurrentTrackResponse(result) {
+                    //debugger
+                    var data = result;
+                    trackCurrent = data;
+                    
+                    //console.log(data);
+                    if (newSong = true)
+                    {
+                      currentTrackPlaceholder.innerHTML = currentTrackTemplate(result);
+        
+                      track_id = JSON.parse(JSON.stringify(data.item.id)), track_name = JSON.parse(JSON.stringify(data.item.name)), track_active = data.is_playing,
+                        track_duration = JSON.parse(JSON.stringify(data.item.duration_ms)), track_progress = JSON.parse(JSON.stringify(data.progress_ms));
+                      //debugger
+                      // var timeout = (track_duration - track_progress) + 10;
+                      // setTimeout(() => {
+                      //     window.location.reload();
+                      // }, timeout)
+        
+                      var artists = JSON.parse(JSON.stringify(data.item.artists[0].name));
+                      if (data.item.artists.length > 1)
+                      {
+                        data.item.artists.forEach(function(artist) {
+                          if (artist !== data.item.artists[0])
+                          {
+                            //console.log("Artist Name: ", artist.name);
+                            artists += ", " + JSON.parse(JSON.stringify(artist.name));
+                          }
+                        })
+                      }
+                      console.log("track name: " + track_name);
+
+                      FullTrackName = artists + " - " + track_name;
+                      GetTrackNameLength();
+                    
+                      GetTrackAnalysis(useTrackAnalysisResponse, track_id);
+                    }
+                }
+        
+                function useTrackAnalysisResponse(result) {
+                  var data = result;
+                  //console.log(data);
+                  
+                  intervalTypes.forEach((t) => {
+                    //debugger
+                    const type = data[t];
+                    type[0].duration = type[0].start + type[0].duration;
+                    type[0].start = 0;
+                    type[type.length - 1].duration = (track_duration / 1000) - type[type.length - 1].start;
+                    type.forEach((interval) => {
+                      if (interval.loudness_max_time) {
+                        interval.loudness_max_time = interval.loudness_max_time * 1000
+                      }
+                      interval.start = interval.start * 1000
+                      interval.duration = interval.duration * 1000
+                    })
+                  })
+                  trackAnalysis = data;
+        
+                  //debugger
+                  track = data.track;
+                  bars = data.bars;
+                  beats = data.beats;
+                  tatums = data.tatums;
+                  sections = data.sections;
+                  segments = data.segments;
+        
+                  //alert("track analysis: " + JSON.stringify(track));
+                  GetTrackFeatures(useTrackFeaturesResponse, track_id);
+                }
+        
+                function useTrackFeaturesResponse(result) {
+                  var data = result;
+                  //console.log(data);
+                  
+                  trackFeatures = data
+        
+                  //debugger
+        
+                  //alert("track analysis: " + JSON.stringify(track));
+        
+                  if (trackFeatures && trackAnalysis)
+                    {
+                      const tock = window.performance.now() - tick;
+        
+                      initial_track_progress = track_progress + tock;
+                      track_progress = track_progress + tock;
+                      //debugger
+                      initial_start = window.performance.now();
+                  
+                      sessionStorage.setItem('tatumsIndex', 0);
+                      sessionStorage.setItem("beatsIndex", 0);
+                      sessionStorage.setItem("barsIndex", 0);
+                      sessionStorage.setItem("segmentsIndex", 0);
+                      sessionStorage.setItem("sectionsIndex", 0);
+        
+                      if (initialized === false) {
+                        //console.log("track data: ", trackCurrent, trackAnalysis, trackFeatures)
+                        //animationLooper();
+                        animationRequestId = requestAnimationFrame(ticks);
+                        console.log('animation started!');
+                        initialized = true;
+                      }
+        
+                      if (track_active === false) {
+                        console.log('track playing!');
+                        track_active = true;
+                      }
+                      //ping();
+                    }
+                    else{
+                      console.log("something went wrong, please refresh the page");
+                    }
+                }
+        
+            function setActiveIntervals() {
+              const determineInterval = (type) => {
+                //debugger
+              const analysis = trackAnalysis[type];
+              const progress = track_progress;
+              for (let i = 0; i < analysis.length; i++) {
+                if (i === (analysis.length - 1)) return i;
+                if (analysis[i].start < progress && progress < analysis[i + 1].start) return i;
+              }
+            }
+              intervalTypes.forEach(type => {
+              const index = determineInterval(type);
+              //debugger
+              if (!activeIntervals[type].start || index !== activeIntervals[type].index) {
+                activeIntervals[type] = { ...trackAnalysis[type][index], index };
+              }
+        
+              const { start, duration } = activeIntervals[type];
+              const elapsed = track_progress - start;
+              activeIntervals[type].elapsed = elapsed;
+              activeIntervals[type].progress = Math.min(Math.max(0, (elapsed / duration)), 1);
+            })
+            //console.log("active intervals: ",activeIntervals);
+          }
+        
+          function getVolume () {
+            const {
+              loudness_max,
+              loudness_start,
+              loudness_max_time,
+              duration,
+              elapsed,
+              start,
+              index
+            } = activeIntervals.segments
+        
+            if (!trackAnalysis.segments[index + 1]) return -100
+            
+            const next = trackAnalysis.segments[index + 1].loudness_start
+            const current = start + elapsed
+          
+            if (elapsed < loudness_max_time) {
+              const progress = Math.min(1, elapsed / loudness_max_time)
+              return loudness_start * (1 - progress) + loudness_max * progress
+            } else {
+              const _start = start + loudness_max_time
+              const _elapsed = current - _start
+              const _duration = duration - loudness_max_time
+              const progress = Math.min(1, _elapsed / _duration)
+              return loudness_max * (1 - progress) + next * progress
+            }
+          }
+        
+          function watch (key, method) {
+            watch(key, method)
+          }
+        
+          function on (interval, method) {
+            hooks[interval] = method
+          }
+        
+          function getInterval (type) {
+            return activeIntervals[type + 's']
+          }
+        
+          var queues = {};
+        
+          queues = {
+              beat: [],
+              volume: []
+            };
+        
+          function ticks (now) {
+            animationRequestId = undefined;
+            animationRequestId = requestAnimationFrame(ticks);
+            if (!track_active) return;
+        
+            /** Set track progress and active intervals. */
+            //console.log(now);
+            track_progress = (now - initial_start) + initial_track_progress;
+            setActiveIntervals();
+        
+            /** Get current volume. */
+            var volume = getVolume();
+            //console.log(volume);
+        
+            // const queues = queues
+            //const queues = queues
+        
+            /** Add volume value to the beginning of the volume queue. */
+            queues.volume.unshift(volume);
+        
+            /** If the queue is larger than 400 values, remove the last value. */
+            if (queues.volume.length > 400) {
+              queues.volume.pop()
+            }
+        
+            /** Add volume value to the beginning of the beat queue. */
+            queues.beat.push(volume);
+        
+            /** If the queue is larger than our defined smoothing value, remove the last value. */
+            if (queues.beat.length > volumeSmoothing) {
+              queues.beat.pop()
+            }
+        
+            function average (arr) {
+              return arr.reduce((a, b) => (a + b)) / arr.length
+            }
+            //debugger
+            /** Scale volume (dB) to a linear range using the minimum and average values of the volume queue. */
+            const sizeScale = d3.scaleLog()
+              .domain([d3.min(queues.volume), average(queues.volume)])
+              .range([0, 1]);
+        
+            /** Average the beat queue, then pass it to our size scale. */
+            const beat = average(queues.beat);
+            volume = sizeScale(beat);
+        
+            //console.log("queues: ", queues);
+        
+            animationLooper();
+          }
+        
+          function ResetAnimation() {
+            frequency_array = [], Atatum = null, Abeat = null, Abar = null, Asection = null,
+            Asegment = null, prevTatum = null, prevBeat = null, prevBar = null, prevSection = null,
+            PrevSegment = null, frequencyIndex = -1, barDownScaler = 1, barDownCounter = 0;
+            cancelAnimationFrame(animationRequestId);
+            animationRequestId = undefined;
+          }
+        
+            //audioElement.crossOrigin = "anonymous";
+        
+        ///animation code
+        var canvas, ctx, center_x, center_y, radius, bars, 
+            x_end, y_end, bar_height, bar_width,
+            frequency_array, Atatum, Abeat, Abar, Asection, Asegment,
+            prevTatum, prevBeat, prevBar, prevSection, PrevSegment,
+            frequencyIndex = -1, barDownScaler, barDownCounter = 0,
+            X = 10;
+        
+            xBars = 200;
+            bar_width = 1;
+        
+        function animationLooper() {
+            Atatum = getInterval("tatum");
+            Abeat = getInterval("beat");
+            Abar = getInterval("bar");
+            Asection = getInterval("section");
+            Asegment = getInterval("segment");
+        
+            canvas = document.getElementById("audioViz");
+            canvas.width = 500;
+            canvas.height = 370;
+            ctx = canvas.getContext("2d");
+
+            SetTextElements();
+            
+            // find the center of the window
+            center_x = canvas.width / 2;
+            center_y = canvas.height / 2;
+            radius = 70;
+        
+            // style the background
+            var opacity1 = 0, opacity2 = 0.25, opacity3 = 1,
+                red1 = 255, red2 = 255, red3 = 255,
+                green1 = 255, green2 = 255, green3 = 255,
+                blue1 = 255, blue2 = 255, blue3 = 255;
+            var gradient = ctx.createLinearGradient(0,0,0,canvas.height);
+            
+            
+            if (BackgrndTransparent == true)
+            {
+              opacity1 = 0;
+              opacity2 = 0;
+              opacity3 = 0;
+            }
+            else{
+              var Backgrnd1RGBValues = hexToRgb(document.getElementById('BackgrndColor1').value);
+              red1 = Backgrnd1RGBValues.r;
+              green1 = Backgrnd1RGBValues.g;
+              blue1 = Backgrnd1RGBValues.b;
+              opacity1 = document.getElementById('Backgrnd1Opacity').value;
+        
+              var Backgrnd2RGBValues = hexToRgb(document.getElementById('BackgrndColor2').value);
+              red2 = Backgrnd2RGBValues.r;
+              green2 = Backgrnd2RGBValues.g;
+              blue2 = Backgrnd2RGBValues.b;
+              opacity2 = document.getElementById('Backgrnd2Opacity').value;
+        
+              var Backgrnd3RGBValues = hexToRgb(document.getElementById('BackgrndColor3').value);
+              red3 = Backgrnd3RGBValues.r;
+              green3 = Backgrnd3RGBValues.g;
+              blue3 = Backgrnd3RGBValues.b;
+              opacity3 = document.getElementById('Backgrnd3Opacity').value;
+            }
+            gradient.addColorStop(0,"rgba(" + red1 + ", " + green1 + ", " + blue1 + ", " + opacity1 + ")");
+            gradient.addColorStop(0.5,"rgba(" + red2 + ", " + green2 + ", " + blue2 + ", " + opacity2 + ")");
+            gradient.addColorStop(1,"rgba(" + red3 + ", " + green3 + ", " + blue3 + ", " + opacity3 + ")");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            //draw a circle
+            ctx.beginPath();
+            ctx.arc(center_x,center_y,radius,0,2*Math.PI);
+            ctx.stroke();
+            
+            for(var i = 0; i < xBars; i++){
+                
+                //divide a circle into equal parts
+                rads = Math.PI * 2 / xBars;
+        
+                bar_height = (100 - (queues.volume[i] * -1)) / 1.7;
+        
+                if (bar_height < 0) bar_height = 0;
+        
+                // set coordinates
+                x = center_x + Math.cos(rads * i) * (radius);
+                y = center_y + Math.sin(rads * i) * (radius);
+                x_end = center_x + Math.cos(rads * i)*(radius + bar_height);
+                y_end = center_y + Math.sin(rads * i)*(radius + bar_height);
+                
+                if (CircleViz == true)
+                  drawBarCircle(x, y, x_end, y_end, bar_width, (Abeat.confidence * 250));
+                if (LineViz == true)
+                  drawLine(queues.volume);
+                if (BarViz == true)
+                  drawBar(canvas.width- (i * 11), canvas.height - (bar_height * 1.7), canvas.width - (i * 11), canvas.height, 10, (Abar.confidence *  250));
+            }
+        
+            prevtatum = Atatum;
+            prevBeat = Abeat;
+            prevBar = Abar;
+            prevSection = Asection;
+            prevSegment = Asegment;
+        }
+         
+        var circlered = 0, circleblue = 1, circlegreen = 249, circlecolorIndex = 0, circlecolorFrequency = 2 * Math.PI / 200;
+        function drawBarCircle(x1, y1, x2, y2, width, intensity){
+            ctx.shadowOffsetX = 2;  
+            ctx.shadowOffsetY = 1;  
+            ctx.shadowBlur = 0;  
+
+            if (CircleRGB == true)
+            {
+              circlered = Math.sin(circlecolorFrequency * circlecolorIndex + 2) * 118 + 117;
+              circlegreen = Math.sin(circlecolorFrequency * circlecolorIndex + 0) * 118 + 117;
+              circleblue = Math.sin(circlecolorFrequency * circlecolorIndex + 4) * 118 + 117;
+        
+              circlered = circlered + (intensity / (255 - circlered))
+              circlegreen = circlegreen + (intensity / (255 - circlegreen))
+              circleblue = circleblue + (intensity / (255 - circleblue))
+            }
+            else
+            {
+              var circleRGBValues = hexToRgb(document.getElementById('CircleColor').value);
+              circlered = circleRGBValues.r;
+              circlegreen = circleRGBValues.g;
+              circleblue = circleRGBValues.b;
+            }
+            //console.log(red, green, blue);
+            var circlelineColor = "rgb(" + circlered + ", " + circlegreen + ", " + circleblue + ", 1)";
+        
+            circlecolorIndex++;
+            if (circlecolorIndex > 200) circlecolorIndex = 0;
+            
+            ctx.strokeStyle = circlelineColor;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x1,y1);
+            ctx.lineTo(x2,y2);
+            ctx.stroke();
+        }
+
+        var linered = 0, lineblue = 1, linegreen = 249, linecolorIndex = 0, linecolorFrequency = 2 * Math.PI / 200;
+        function drawLine(Data){
+            ctx.save();
+
+            ctx.shadowOffsetX = 0;  
+            ctx.shadowOffsetY = 0;  
+            ctx.shadowBlur = 0;
+        
+            if (LineRGB == true)
+            {
+              linered = Math.sin(linecolorFrequency * linecolorIndex + 2) * 128 + 127;
+              linegreen = Math.sin(linecolorFrequency * linecolorIndex + 0) * 128 + 127;
+              lineblue = Math.sin(linecolorFrequency * linecolorIndex + 4) * 128 + 127;
+            }
+            else
+            {
+              var lineRGBValues = hexToRgb(document.getElementById('LineColor').value);
+              linered = lineRGBValues.r;
+              linegreen = lineRGBValues.g;
+              lineblue = lineRGBValues.b;
+            }
+            //console.log(red, green, blue);
+            var lineColor = "rgb(" + linered + ", " + linegreen + ", " + lineblue + ", 1)";
+        
+            linecolorIndex++;
+            if (linecolorIndex > 200) linecolorIndex = 0;
+            
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = lineColor;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2 - Data[0]);
+            for (var i = 1; i < 100; i++) {
+              ctx.lineTo(
+                (canvas.width / 100) * i,
+                canvas.height / 2 - Data[i]
+              );
+            }
+            ctx.stroke();
+            ctx.closePath();
+        
+            ctx.restore();
+        }
+
+        var barred = 0, barblue = 1, bargreen = 249, barcolorIndex = 0, barcolorFrequency = 2 * Math.PI / 200;
+        function drawBar(x1, y1, x2, y2, width, intensity){
+            ctx.shadowOffsetX = 1;  
+            ctx.shadowOffsetY = 0;  
+            ctx.shadowBlur = 1;
+
+            if (BarRGB == true)
+            {
+              barred = Math.sin(barcolorFrequency * barcolorIndex + 2) * 118 + 117;
+              bargreen = Math.sin(barcolorFrequency * barcolorIndex + 0) * 118 + 117;
+              barblue = Math.sin(barcolorFrequency * barcolorIndex + 4) * 118 + 117;
+        
+              barred = barred + (intensity / (255 - barred))
+              bargreen = bargreen + (intensity / (255 - bargreen))
+              barblue = barblue + (intensity / (255 - barblue))
+            }
+            else
+            {
+              var barRGBValues = hexToRgb(document.getElementById('BarColor').value);
+              barred = barRGBValues.r;
+              bargreen = barRGBValues.g;
+              barblue = barRGBValues.b;
+            }
+            //console.log(red, green, blue);
+            var barlineColor = "rgb(" + barred + ", " + bargreen + ", " + barblue + ", 1)";
+        
+            barcolorIndex++;
+            if (barcolorIndex > 200) barcolorIndex = 0;
+            
+            ctx.strokeStyle = barlineColor;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x1,y1);
+            ctx.lineTo(x2,y2);
+            ctx.stroke();
+        }
+
+        function SetTextElements() {
+          ctx.font = "20px verdana";
+          ctx.shadowOffsetX = 1;  
+          ctx.shadowOffsetY = 2;  
+          ctx.shadowBlur = 3;  
+          ctx.shadowColor = "grey";  
+
+          ctx.fillStyle = displayerColor;
+          ctx.fillText("Current Song: ", 10, 30);
+
+          ctx.clearRect(10, 35, 500, 100);
+
+          ctx.fillStyle = contentColor;
+          ctx.fillText(FullTrackName, X, 60);
+
+          X -= 2;
+
+          if (X < -1 * (trackNameLength + 10)) {
+            X = 260;
+          }
+
+          ctx.clearRect(0, 0, 10, 100);
+          ctx.clearRect(250, 35, 500, 100);
+        }
+        }
+        </script>
+        
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      (function() {
+        
+        if (!sessionStorage.getItem('access_token'))
+        {
+            console.log('logging in');
+            window.location.href = '/login';
+        }
+        if (window.location.href !== 'http://localhost:8888' && !sessionStorage.getItem('access_token'))
+        {
+            params = getHashParams();
+
+            sessionStorage.setItem('access_token', params.access_token);
+            localStorage.setItem('refresh_token', params.refresh_token);
+        }
+        console.log(sessionStorage.getItem('access_token'));
+        initialize();
+    })();
+
+      function getHashParams() {
+          var hashParams = {};
+          var e, r = /([^&;=]+)=?([^&;]*)/g,
+              q = window.location.hash.substring(1);
+          while ( e = r.exec(q)) {
+             hashParams[e[1]] = decodeURIComponent(e[2]);
+          }
+          return hashParams;
+        }
+
+      function initialize(access_token = 'unknown', firsttime = true) {
+        document.getElementById('obtain-new-token').addEventListener('click', function() {
+          $.ajax({
+              url: '/refresh_token',
+              data: {
+                'refresh_token': refresh_token
+              }
+            }).done(function(data) {
+              access_token = data.access_token;
+              console.log("token refreshed: ", access_token);
+              oauthPlaceholder.innerHTML = oauthTemplate({
+                access_token: access_token,
+                refresh_token: refresh_token
+              });
+              sessionStorage.setItem('access_token', access_token);
+            });
+        }, false);
+
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+            userProfilePlaceholder = document.getElementById('user-profile');
+
+        var oauthSource = document.getElementById('oauth-template').innerHTML,
+            oauthTemplate = Handlebars.compile(oauthSource),
+            oauthPlaceholder = document.getElementById('oauth');
+
+        var params = getHashParams();
+
+        var refresh_token = params.refresh_token,
+            error = params.error;
+        
+        if (access_token === 'unknown')
+            access_token = params.access_token;
+
+        if (refresh_token) {
+          localStorage.setItem('refresh_token', refresh_token);
+          //console.log("refresh_token set: ", refresh_token);
+        }
+
+        if (!access_token && refresh_token) {
+          $.ajax({
+              url: '/refresh_token',
+              data: {
+                'refresh_token': refresh_token
+              }
+            }).done(function(data) {
+              access_token = data.access_token;
+              oauthPlaceholder.innerHTML = oauthTemplate({
+                access_token: access_token,
+                refresh_token: refresh_token
+              });
+              sessionStorage.setItem('access_token', access_token);
+            });
+        }
+
+        if (error) {
+          alert('There was an error during the authentication');
+          $('#login').show();
+        } else {
+          if (access_token !== 'unknown') {
+            //console.log("acces_token: ", access_token)
+            // render oauth info
+            oauthPlaceholder.innerHTML = oauthTemplate({
+              access_token: access_token,
+              refresh_token: refresh_token
+            });
+
+            $.ajax({
+                url: 'https://api.spotify.com/v1/me',
+                headers: {
+                  'Authorization': 'Bearer ' + access_token
+                },
+                success: function(response) {
+                  if (response !== null)
+                  {
+                    userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+                  
+                    $('#login').hide();
+                    $('#loggedin').show();
+                  }
+                }
+            });
+            sessionStorage.setItem('access_token', access_token);
+
+            Handlebars.registerHelper('ifArtist', function(v1, v2, options) {
+              if(v1 === v2) {
+                return options.fn(this);
+              }
+              return options.inverse(this);
+            });
+            
+            if (firsttime == true) {
+              initPage();
+            }
+
+          } else {
+            console.log('logging in');
+            window.location.href = '/login';
+          }
+        }
+      };
+    </script>
+  </body>
+</html>
