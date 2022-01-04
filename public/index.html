@@ -313,8 +313,8 @@
             var access_token = sessionStorage.getItem('access_token');
             var refresh_token = localStorage.getItem('refresh_token');
         
-            var initialized = false, track_id = "", track_name = "", FullTrackName = "", trackNameLength = 300, track_duration = 100000, track_progress = 0,
-                initial_track_progress = 0, initial_start = 0, track_active = false, volume = 0;
+            var initialized = false, track_id = "", track_name = "", FullTrackName = "", trackNameLength = 300, track_timestamp = "", track_duration = 100000, track_progress = 0,
+                track_active = false, volume = 0, last_progress_update_timestamp = 0;
         
             var track = {}, bars = {}, beats = {}, tatums = {}, sections = {}, segments = {};
             
@@ -359,9 +359,10 @@
               // activeIntervals.watch('bars', b => hooks.bar(b))
               // activeIntervals.watch('sections', s => hooks.section(s))
             }
-        
+            
+            var intervalProc;
             function ping () {
-                setInterval(() => GetCurrentTrack(useCurrentTrackResponse), 2500);
+                intervalProc = setInterval(() => GetCurrentTrack(useCurrentTrackResponse), 1000);
             }
         
             function refresh_access_token() {
@@ -369,6 +370,9 @@
                   url: '/refresh_token',
                   data: {
                       'refresh_token': refresh_token
+                  },
+                  error: function (err) {
+                    console.log("Failed to refresh access token!", err);
                   }
               }).done(function(data) {
                   access_token = data.access_token;
@@ -378,6 +382,7 @@
                       refresh_token: refresh_token
                   });
                   sessionStorage.setItem('access_token', access_token);
+                  ping();
                   initialize(access_token, false);
               });
             }
@@ -394,12 +399,13 @@
                       },
                       error: function(err) {
                         console.log("refreshing access_token!");
+                        clearInterval(intervalProc);
                         refresh_access_token();
                         // ping();
                       },
                       success: function(response) {
                         tick = window.performance.now();
-                        console.log("connection: ", connections++);
+                        //console.log("connection: ", connections++);
                         if (response)
                         {
                           if (response.is_playing === true)
@@ -420,6 +426,8 @@
                               else
                               {
                                 newSong = false;
+                                track_progress = JSON.parse(JSON.stringify(response.progress_ms));
+                                last_progress_update_timestamp = window.performance.now();
                                 if (initialized === false)
                                 {
                                   callback(response);
@@ -428,14 +436,14 @@
                             }
                             else {
                               track_progress = JSON.parse(JSON.stringify(response.progress_ms));
+                              last_progress_update_timestamp = window.performance.now();
                               callback(response);
                             }
                           }
                           else if (response.is_playing === false) {
                             console.log('track paused!');
-                            if (!($('.mymarquee').text().indexOf('(paused!)') > -1))
-                              $('.mymarquee').html(($('.mymarquee').html() + " (paused!)").toString());
-                            UpdateMarquee();
+                            if (!(FullTrackName.indexOf('(paused!)') > -1))
+                              FullTrackName += " (paused!)";
                             track_active = false;
                             initialized = false;
                             ResetAnimation();
@@ -489,12 +497,8 @@
                       currentTrackPlaceholder.innerHTML = currentTrackTemplate(result);
         
                       track_id = JSON.parse(JSON.stringify(data.item.id)), track_name = JSON.parse(JSON.stringify(data.item.name)), track_active = data.is_playing,
-                        track_duration = JSON.parse(JSON.stringify(data.item.duration_ms)), track_progress = JSON.parse(JSON.stringify(data.progress_ms));
-                      //debugger
-                      // var timeout = (track_duration - track_progress) + 10;
-                      // setTimeout(() => {
-                      //     window.location.reload();
-                      // }, timeout)
+                        track_duration = JSON.parse(JSON.stringify(data.item.duration_ms)), track_progress = JSON.parse(JSON.stringify(data.progress_ms)),
+                        last_progress_update_timestamp = window.performance.now();
         
                       var artists = JSON.parse(JSON.stringify(data.item.artists[0].name));
                       if (data.item.artists.length > 1)
@@ -556,17 +560,13 @@
         
                   //debugger
         
-                  //alert("track analysis: " + JSON.stringify(track));
-        
                   if (trackFeatures && trackAnalysis)
                     {
                       const tock = window.performance.now() - tick;
-        
-                      initial_track_progress = track_progress + tock;
+                      
                       track_progress = track_progress + tock;
-                      //debugger
-                      initial_start = window.performance.now();
-                  
+                      last_progress_update_timestamp = window.performance.now();
+
                       sessionStorage.setItem('tatumsIndex', 0);
                       sessionStorage.setItem("beatsIndex", 0);
                       sessionStorage.setItem("barsIndex", 0);
@@ -663,7 +663,7 @@
               beat: [],
               volume: []
             };
-        
+          
           function ticks (now) {
             animationRequestId = undefined;
             animationRequestId = requestAnimationFrame(ticks);
@@ -671,8 +671,30 @@
         
             /** Set track progress and active intervals. */
             //console.log(now);
-            track_progress = (now - initial_start) + initial_track_progress;
             setActiveIntervals();
+
+            track_progress = track_progress + (now - last_progress_update_timestamp);
+            last_progress_update_timestamp = now;
+
+            //debugger
+            // get progress in track as displayable string
+            let durationInSeconds = Math.round((track_duration / 1000) - 0.5);
+
+            let durationMinTxt = Math.round((durationInSeconds / 60) - 0.5).toString();
+            if (durationMinTxt.length < 2) durationMinTxt = "0" + durationMinTxt;
+
+            let durationSecTxt = Math.round((durationInSeconds % 60) - 0.5).toString();
+            if (durationSecTxt.length < 2) durationSecTxt = "0" + durationSecTxt;
+
+            let timestampInSeconds = Math.round((track_progress / 1000) - 0.5);
+
+            let timestampMinTxt = Math.round((timestampInSeconds / 60) - 0.5).toString();
+            if (timestampMinTxt.length < 2) timestampMinTxt = "0" + timestampMinTxt;
+
+            let timestampSecTxt = Math.round((timestampInSeconds % 60) - 0.5).toString();
+            if (timestampSecTxt.length < 2) timestampSecTxt = "0" + timestampSecTxt;
+
+            track_timestamp = `${timestampMinTxt}:${timestampSecTxt} / ${durationMinTxt}:${durationSecTxt}`;
         
             /** Get current volume. */
             var volume = getVolume();
@@ -732,7 +754,6 @@
             prevTatum, prevBeat, prevBar, prevSection, PrevSegment,
             frequencyIndex = -1, barDownScaler, barDownCounter = 0,
             X = 10;
-        
             xBars = 200;
             bar_width = 1;
         
@@ -952,6 +973,9 @@
           ctx.shadowOffsetY = 2;  
           ctx.shadowBlur = 3;  
           ctx.shadowColor = "grey";  
+
+          ctx.fillStyle = "#000000";
+          ctx.fillText(track_timestamp, 320, 30);
 
           ctx.fillStyle = displayerColor;
           ctx.fillText("Current Song: ", 10, 30);
