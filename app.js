@@ -11,7 +11,7 @@ var cookieParser = require('cookie-parser');
 
 var client_id = 'f978cae67f704bf9a1eeb9c5c4c0456d'; // Your client id
 var client_secret = '7f0f468951ce46d4aa5063da416c3e8e'; // Your secret
-var redirect_uri = 'https://vrijenhoek.familyds.com:8889/callback/'; // Your redirect uris
+var redirect_uri = 'https://spotifyviz.sywapps.com:8888/callback/'; // Your redirect uris
 
 /**
  * Generates a random string containing numbers and letters
