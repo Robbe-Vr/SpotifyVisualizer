@@ -9,9 +9,9 @@ var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 
-var client_id = 'f978cae67f704bf9a1eeb9c5c4c0456d'; // Your client id
-var client_secret = '7f0f468951ce46d4aa5063da416c3e8e'; // Your secret
-var redirect_uri = 'https://vrijenhoek.familyds.com:8889/callback/'; // Your redirect uris
+var client_id = '<your_spotify_app_client_id>'; // Your client id
+var client_secret = '<your_spotify_app_secret>'; // Your secret
+var redirect_uri = 'https://<your_url>:8888/callback/'; // Your redirect uris
 
 /**
  * Generates a random string containing numbers and letters
